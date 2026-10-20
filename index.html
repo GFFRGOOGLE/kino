@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Поиск и скачивание музыки</title>
+    <title>Плеер и поиск музыки (Zaycev.net)</title>
     <style>
-        /* Базовые стили в темной теме */
         :root {
             --bg-color: #121212;
             --text-color: #ffffff;
@@ -13,6 +12,7 @@
             --card-bg: #1e1e1e;
             --border-color: #333333;
             --success-color: #03dac6;
+            --player-height: 80px;
         }
 
         * {
@@ -26,6 +26,7 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             padding: 20px;
+            padding-bottom: calc(var(--player-height) + 20px);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -44,7 +45,6 @@
             color: var(--accent-color);
         }
 
-        /* Строка поиска */
         .search-box {
             display: flex;
             gap: 10px;
@@ -53,22 +53,17 @@
 
         input[type="text"] {
             flex: 1;
-            padding: 14px;
+            padding: 12px;
             border-radius: 10px;
             border: 1px solid var(--border-color);
             background-color: var(--card-bg);
             color: var(--text-color);
             font-size: 16px;
             outline: none;
-            transition: border-color 0.3s;
         }
 
-        input[type="text"]:focus {
-            border-color: var(--accent-color);
-        }
-
-        button {
-            padding: 14px 20px;
+        button#searchBtn {
+            padding: 12px 20px;
             border: none;
             border-radius: 10px;
             background-color: var(--accent-color);
@@ -76,16 +71,13 @@
             font-weight: bold;
             cursor: pointer;
             font-size: 16px;
-            transition: opacity 0.3s;
         }
 
-        button:hover { opacity: 0.8; }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* Индикаторы состояния */
         #status {
             text-align: center;
-            margin: 20px 0;
+            margin: 10px 0;
             font-style: italic;
             color: #888;
             display: none;
@@ -94,221 +86,291 @@
         .error-msg {
             color: #ff5252;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
-        /* Список треков */
         .track-list {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
         }
 
         .track {
             background-color: var(--card-bg);
-            padding: 15px;
-            border-radius: 12px;
+            padding: 12px 15px;
+            border-radius: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border: 1px solid var(--border-color);
-            transition: transform 0.2s;
-        }
-
-        .track:hover {
-            transform: translateY(-2px);
-            border-color: var(--accent-color);
         }
 
         .track-info {
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 4px;
             overflow: hidden;
-            padding-right: 15px;
+            padding-right: 10px;
+            flex: 1;
         }
 
-        .track-artist {
+        .track-artist { font-size: 12px; color: #999; }
+        .track-title { font-size: 15px; font-weight: 600; }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-play {
+            background-color: var(--accent-color);
+            color: #000;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
             font-size: 13px;
-            color: #999;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
 
-        .track-title {
-            font-size: 16px;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .download-btn {
+        .btn-dl {
             background-color: var(--success-color);
             color: #000;
             text-decoration: none;
-            padding: 10px 15px;
-            border-radius: 8px;
-            font-size: 14px;
+            padding: 8px 12px;
+            border-radius: 6px;
             font-weight: bold;
-            white-space: nowrap;
-            transition: background-color 0.3s;
+            font-size: 13px;
+            display: inline-block;
         }
 
-        .download-btn:hover {
-            background-color: #01b3a1;
+        .audio-player-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: var(--player-height);
+            background-color: #1a1a1a;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 15px;
+            z-index: 1000;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
         }
 
-        /* Адаптив для телефонов */
+        audio {
+            width: 100%;
+            max-width: 600px;
+            outline: none;
+        }
+
         @media (max-width: 480px) {
             .search-box { flex-direction: column; }
-            button { width: 100%; }
-            .track { flex-direction: column; align-items: flex-start; gap: 15px; }
-            .download-btn { width: 100%; text-align: center; }
+            button#searchBtn { width: 100%; }
+            .track { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .actions { width: 100%; justify-content: space-between; }
+            .btn-play, .btn-dl { flex: 1; text-align: center; }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🎵 Музыкальный поисковик</h1>
+    <h1>🎵 Плеер и поиск (Zaycev.net)</h1>
     
     <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Исполнитель или песня (например: Кино Стук)" onkeypress="handleKeyPress(event)">
+        <input type="text" id="searchInput" placeholder="Поиск (например: Кино Группа крови)" onkeypress="handleKeyPress(event)">
         <button id="searchBtn" onclick="searchMusic()">Найти</button>
     </div>
 
-    <div id="status">Идет поиск и парсинг данных... Пожалуйста, подождите.</div>
+    <div id="status">Идет поиск...</div>
     <div id="errorMsg" class="error-msg"></div>
+    
     <div id="results" class="track-list"></div>
 </div>
 
+<div class="audio-player-container">
+    <audio id="mainAudio" controls preload="none"></audio>
+</div>
+
 <script>
-    // Используем публичный CORS-прокси. 
-    // Если он перестанет работать, его нужно будет заменить на другой.
+    // Используем публичный CORS-прокси для обхода ограничений браузера
     const CORS_PROXY = "https://api.allorigins.win/get?url=";
-    const HITMOS_BASE_URL = "https://hitmos.me";
-    const HITMOS_SEARCH_URL = HITMOS_BASE_URL + "/search?q=";
+    const ZAYCEV_BASE_URL = "https://zaycev.net";
+    const ZAYCEV_SEARCH_URL = ZAYCEV_BASE_URL + "/search.html?query_search=";
+    
+    const audioPlayer = document.getElementById('mainAudio');
 
     function handleKeyPress(e) {
-        if (e.key === 'Enter') {
-            searchMusic();
+        if (e.key === 'Enter') searchMusic();
+    }
+
+    function renderTracks(tracks, headerText = "") {
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = ''; 
+        
+        if (headerText) {
+            const header = document.createElement('h3');
+            header.innerText = headerText;
+            header.style.margin = "15px 0 10px 0";
+            header.style.fontSize = "16px";
+            header.style.color = "#888";
+            resultsDiv.appendChild(header);
         }
+
+        if (tracks.length === 0) {
+            resultsDiv.innerHTML += '<p style="text-align:center; color:#888;">Ничего не найдено.</p>';
+            return;
+        }
+
+        tracks.forEach(track => {
+            const trackDiv = document.createElement('div');
+            trackDiv.className = 'track';
+            
+            const safeArtist = track.artist.replace(/'/g, "\\'");
+            const safeTitle = track.title.replace(/'/g, "\\'");
+
+            trackDiv.innerHTML = `
+                <div class="track-info">
+                    <span class="track-artist">${track.artist}</span>
+                    <span class="track-title">${track.title}</span>
+                </div>
+                <div class="actions">
+                    <button class="btn-play" onclick="fetchAndPlay('${safeArtist}', '${safeTitle}')">▶ Слушать</button>
+                    <button class="btn-dl" onclick="fetchAndDownload('${safeArtist}', '${safeTitle}')">Скачать</button>
+                </div>
+            `;
+            resultsDiv.appendChild(trackDiv);
+        });
     }
 
     async function searchMusic() {
         const query = document.getElementById('searchInput').value.trim();
-        if (!query) {
-            showError("Введите название песни или исполнителя.");
-            return;
-        }
+        if (!query) return;
 
         const statusDiv = document.getElementById('status');
-        const resultsDiv = document.getElementById('results');
         const errorMsg = document.getElementById('errorMsg');
         const searchBtn = document.getElementById('searchBtn');
 
-        // Сброс предыдущих результатов
         statusDiv.style.display = 'block';
-        resultsDiv.innerHTML = '';
         errorMsg.innerText = '';
         searchBtn.disabled = true;
 
         try {
-            // Формируем URL запроса
-            const targetUrl = HITMOS_SEARCH_URL + encodeURIComponent(query);
-            
-            // Запрос через прокси
+            const targetUrl = ZAYCEV_SEARCH_URL + encodeURIComponent(query);
             const response = await fetch(CORS_PROXY + encodeURIComponent(targetUrl));
-            
-            if (!response.ok) {
-                throw new Error(`Ошибка сети: ${response.status}`);
-            }
-
             const data = await response.json();
             
-            if (!data.contents) {
-                throw new Error("Не удалось получить данные от прокси.");
-            }
-
-            // Парсим полученный HTML
             const parser = new DOMParser();
             const doc = parser.parseFromString(data.contents, "text/html");
 
-            // ВНИМАНИЕ: Селекторы могут измениться, если Hitmos обновит дизайн.
-            // Если поиск перестанет работать, проверьте актуальные классы через F12 на сайте.
-            const trackNodes = doc.querySelectorAll('.track'); 
+            // ВНИМАНИЕ: Селекторы могут измениться, если Zaycev.net обновит дизайн.
+            // Ищем элементы, содержащие информацию о треках.
+            const trackNodes = doc.querySelectorAll('.track, .song-item, .b-track'); 
 
             if (trackNodes.length === 0) {
-                // Пробуем альтернативный селектор, часто используемый на таких сайтах
-                const altTrackNodes = doc.querySelectorAll('.song-item');
-                if (altTrackNodes.length === 0) {
-                    showError("Треки не найдены. Возможно, изменилась структура сайта или прокси блокирует запрос.");
-                    statusDiv.style.display = 'none';
-                    searchBtn.disabled = false;
-                    return;
-                }
+                errorMsg.innerText = "Ничего не найдено. Попробуйте другой запрос.";
+                statusDiv.style.display = 'none';
+                searchBtn.disabled = false;
+                return;
             }
 
+            let parsedTracks = [];
             let count = 0;
-            // Ограничиваем вывод первыми 15 результатами для скорости
-            const items = trackNodes.length > 0 ? trackNodes : doc.querySelectorAll('.song-item');
-            
-            items.forEach(node => {
+
+            trackNodes.forEach(node => {
                 if (count >= 15) return;
 
-                // Ищем элементы (классы могут отличаться, здесь стоят наиболее вероятные)
-                const titleEl = node.querySelector('.track-title') || node.querySelector('.song-title') || node.querySelector('a');
-                const artistEl = node.querySelector('.track-artist') || node.querySelector('.song-artist');
-                const dlEl = node.querySelector('a[href*="download"]') || node.querySelector('a[download]') || node.querySelector('a[href*=".mp3"]');
+                const titleEl = node.querySelector('.track-title, .song-title, a');
+                const artistEl = node.querySelector('.track-artist, .song-artist');
 
-                if (titleEl && dlEl) {
-                    const title = titleEl.innerText.trim();
-                    const artist = artistEl ? artistEl.innerText.trim() : 'Неизвестный исполнитель';
-                    
-                    let downloadUrl = dlEl.getAttribute('href');
-                    
-                    // Если ссылка относительная - добавляем базовый URL
-                    if (downloadUrl && !downloadUrl.startsWith('http')) {
-                        downloadUrl = HITMOS_BASE_URL + downloadUrl;
-                    }
-
-                    // Если это ссылка на страницу скачивания, прокси может понадобиться и для неё.
-                    // Но обычно прямой ссылки достаточно.
-
-                    if (title && downloadUrl) {
-                        const trackDiv = document.createElement('div');
-                        trackDiv.className = 'track';
-                        trackDiv.innerHTML = `
-                            <div class="track-info">
-                                <span class="track-artist">${artist}</span>
-                                <span class="track-title">${title}</span>
-                            </div>
-                            <!-- target="_blank" открывает в новой вкладке -->
-                            <a href="${downloadUrl}" target="_blank" rel="noopener noreferrer" class="download-btn">Скачать</a>
-                        `;
-                        resultsDiv.appendChild(trackDiv);
-                        count++;
-                    }
+                if (titleEl) {
+                    parsedTracks.push({
+                        title: titleEl.innerText.trim(),
+                        artist: artistEl ? artistEl.innerText.trim() : 'Неизвестно'
+                    });
+                    count++;
                 }
             });
 
-            if (count === 0) {
-                showError("Не удалось извлечь ссылки. Возможно, сайт-источник изменил верстку.");
+            if (parsedTracks.length > 0) {
+                renderTracks(parsedTracks, `Результаты поиска: "${query}"`);
+            } else {
+                errorMsg.innerText = "Не удалось распознать треки.";
             }
 
         } catch (error) {
             console.error(error);
-            showError("Произошла ошибка. CORS-прокси может быть перегружен. Попробуйте еще раз.");
+            errorMsg.innerText = "Ошибка при поиске. CORS-прокси может быть перегружен.";
         } finally {
             statusDiv.style.display = 'none';
             searchBtn.disabled = false;
         }
     }
 
-    function showError(message) {
-        document.getElementById('errorMsg').innerText = message;
+    async function getMp3Url(artist, title) {
+        const query = `${artist} ${title}`;
+        const targetUrl = ZAYCEV_SEARCH_URL + encodeURIComponent(query);
+        
+        const response = await fetch(CORS_PROXY + encodeURIComponent(targetUrl));
+        const data = await response.json();
+        
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(data.contents, "text/html");
+
+        const dlLinkEl = doc.querySelector('a[href*="download"], a[download], a[href*=".mp3"]');
+        
+        if (dlLinkEl) {
+            let url = dlLinkEl.getAttribute('href');
+            if (url && !url.startsWith('http')) {
+                url = ZAYCEV_BASE_URL + url;
+            }
+            return url;
+        }
+        throw new Error("Ссылка не найдена");
+    }
+
+    async function fetchAndPlay(artist, title) {
+        const btn = event.target;
+        const oldText = btn.innerText;
+        btn.innerText = "Загрузка...";
+        btn.disabled = true;
+
+        try {
+            const mp3Url = await getMp3Url(artist, title);
+            audioPlayer.src = mp3Url;
+            audioPlayer.play();
+        } catch (error) {
+            alert("Не удалось запустить аудио. Возможно, сайт блокирует потоковое воспроизведение. Попробуйте скачать файл.");
+        } finally {
+            btn.innerText = oldText;
+            btn.disabled = false;
+        }
+    }
+
+    async function fetchAndDownload(artist, title) {
+        const btn = event.target;
+        const oldText = btn.innerText;
+        btn.innerText = "Ждите...";
+        btn.disabled = true;
+
+        try {
+            const mp3Url = await getMp3Url(artist, title);
+            const a = document.createElement('a');
+            a.href = mp3Url;
+            a.download = `${artist} - ${title}.mp3`;
+            a.target = "_blank";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } catch (error) {
+            alert("Ошибка скачивания. Ссылка не найдена.");
+        } finally {
+            btn.innerText = oldText;
+            btn.disabled = false;
+        }
     }
 </script>
 
