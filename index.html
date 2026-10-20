@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поиск и скачивание музыки</title>
+    <style>
+        /* Базовые стили в темной теме */
+        :root {
+            --bg-color: #121212;
+            --text-color: #ffffff;
+            --accent-color: #bb86fc;
+            --card-bg: #1e1e1e;
+            --border-color: #333333;
+            --success-color: #03dac6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+            color: var(--accent-color);
+        }
+
+        /* Строка поиска */
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent-color);
+        }
+
+        button {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            background-color: var(--accent-color);
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+            transition: opacity 0.3s;
+        }
+
+        button:hover { opacity: 0.8; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Индикаторы состояния */
+        #status {
+            text-align: center;
+            margin: 20px 0;
+            font-style: italic;
+            color: #888;
+            display: none;
+        }
+
+        .error-msg {
+            color: #ff5252;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* Список треков */
+        .track-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .track {
+            background-color: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s;
+        }
+
+        .track:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-color);
+        }
+
+        .track-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            overflow: hidden;
+            padding-right: 15px;
+        }
+
+        .track-artist {
+            font-size: 13px;
+            color: #999;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .track-title {
+            font-size: 16px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .download-btn {
+            background-color: var(--success-color);
+            color: #000;
+            text-decoration: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            white-space: nowrap;
+            transition: background-color 0.3s;
+        }
+
+        .download-btn:hover {
+            background-color: #01b3a1;
+        }
+
+        /* Адаптив для телефонов */
+        @media (max-width: 480px) {
+            .search-box { flex-direction: column; }
+            button { width: 100%; }
+            .track { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .download-btn { width: 100%; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎵 Музыкальный поисковик</h1>
+    
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Исполнитель или песня (например: Кино Стук)" onkeypress="handleKeyPress(event)">
+        <button id="searchBtn" onclick="searchMusic()">Найти</button>
+    </div>
+
+    <div id="status">Идет поиск и парсинг данных... Пожалуйста, подождите.</div>
+    <div id="errorMsg" class="error-msg"></div>
+    <div id="results" class="track-list"></div>
+</div>
+
+<script>
+    // Используем публичный CORS-прокси. 
+    // Если он перестанет работать, его нужно будет заменить на другой.
+    const CORS_PROXY = "https://api.allorigins.win/get?url=";
+    const HITMOS_BASE_URL = "https://hitmos.me";
+    const HITMOS_SEARCH_URL = HITMOS_BASE_URL + "/search?q=";
+
+    function handleKeyPress(e) {
+        if (e.key === 'Enter') {
+            searchMusic();
+        }
+    }
+
+    async function searchMusic() {
+        const query = document.getElementById('searchInput').value.trim();
+        if (!query) {
+            showError("Введите название песни или исполнителя.");
+            return;
+        }
+
+        const statusDiv = document.getElementById('status');
+        const resultsDiv = document.getElementById('results');
+        const errorMsg = document.getElementById('errorMsg');
+        const searchBtn = document.getElementById('searchBtn');
+
+        // Сброс предыдущих результатов
+        statusDiv.style.display = 'block';
+        resultsDiv.innerHTML = '';
+        errorMsg.innerText = '';
+        searchBtn.disabled = true;
+
+        try {
+            // Формируем URL запроса
+            const targetUrl = HITMOS_SEARCH_URL + encodeURIComponent(query);
+            
+            // Запрос через прокси
+            const response = await fetch(CORS_PROXY + encodeURIComponent(targetUrl));
+            
+            if (!response.ok) {
+                throw new Error(`Ошибка сети: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            if (!data.contents) {
+                throw new Error("Не удалось получить данные от прокси.");
+            }
+
+            // Парсим полученный HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(data.contents, "text/html");
+
+            // ВНИМАНИЕ: Селекторы могут измениться, если Hitmos обновит дизайн.
+            // Если поиск перестанет работать, проверьте актуальные классы через F12 на сайте.
+            const trackNodes = doc.querySelectorAll('.track'); 
+
+            if (trackNodes.length === 0) {
+                // Пробуем альтернативный селектор, часто используемый на таких сайтах
+                const altTrackNodes = doc.querySelectorAll('.song-item');
+                if (altTrackNodes.length === 0) {
+                    showError("Треки не найдены. Возможно, изменилась структура сайта или прокси блокирует запрос.");
+                    statusDiv.style.display = 'none';
+                    searchBtn.disabled = false;
+                    return;
+                }
+            }
+
+            let count = 0;
+            // Ограничиваем вывод первыми 15 результатами для скорости
+            const items = trackNodes.length > 0 ? trackNodes : doc.querySelectorAll('.song-item');
+            
+            items.forEach(node => {
+                if (count >= 15) return;
+
+                // Ищем элементы (классы могут отличаться, здесь стоят наиболее вероятные)
+                const titleEl = node.querySelector('.track-title') || node.querySelector('.song-title') || node.querySelector('a');
+                const artistEl = node.querySelector('.track-artist') || node.querySelector('.song-artist');
+                const dlEl = node.querySelector('a[href*="download"]') || node.querySelector('a[download]') || node.querySelector('a[href*=".mp3"]');
+
+                if (titleEl && dlEl) {
+                    const title = titleEl.innerText.trim();
+                    const artist = artistEl ? artistEl.innerText.trim() : 'Неизвестный исполнитель';
+                    
+                    let downloadUrl = dlEl.getAttribute('href');
+                    
+                    // Если ссылка относительная - добавляем базовый URL
+                    if (downloadUrl && !downloadUrl.startsWith('http')) {
+                        downloadUrl = HITMOS_BASE_URL + downloadUrl;
+                    }
+
+                    // Если это ссылка на страницу скачивания, прокси может понадобиться и для неё.
+                    // Но обычно прямой ссылки достаточно.
+
+                    if (title && downloadUrl) {
+                        const trackDiv = document.createElement('div');
+                        trackDiv.className = 'track';
+                        trackDiv.innerHTML = `
+                            <div class="track-info">
+                                <span class="track-artist">${artist}</span>
+                                <span class="track-title">${title}</span>
+                            </div>
+                            <!-- target="_blank" открывает в новой вкладке -->
+                            <a href="${downloadUrl}" target="_blank" rel="noopener noreferrer" class="download-btn">Скачать</a>
+                        `;
+                        resultsDiv.appendChild(trackDiv);
+                        count++;
+                    }
+                }
+            });
+
+            if (count === 0) {
+                showError("Не удалось извлечь ссылки. Возможно, сайт-источник изменил верстку.");
+            }
+
+        } catch (error) {
+            console.error(error);
+            showError("Произошла ошибка. CORS-прокси может быть перегружен. Попробуйте еще раз.");
+        } finally {
+            statusDiv.style.display = 'none';
+            searchBtn.disabled = false;
+        }
+    }
+
+    function showError(message) {
+        document.getElementById('errorMsg').innerText = message;
+    }
+</script>
+
+</body>
+</html>
