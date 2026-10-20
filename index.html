@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Плеер и поиск музыки (Zaycev.net)</title>
+    <title>Плеер и поиск музыки</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -14,13 +14,7 @@
             --success-color: #03dac6;
             --player-height: 80px;
         }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
@@ -32,25 +26,9 @@
             align-items: center;
             min-height: 100vh;
         }
-
-        .container {
-            width: 100%;
-            max-width: 600px;
-        }
-
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-            font-size: 24px;
-            color: var(--accent-color);
-        }
-
-        .search-box {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
+        .container { width: 100%; max-width: 600px; }
+        h1 { text-align: center; margin-bottom: 20px; font-size: 24px; color: var(--accent-color); }
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
         input[type="text"] {
             flex: 1;
             padding: 12px;
@@ -61,7 +39,6 @@
             font-size: 16px;
             outline: none;
         }
-
         button#searchBtn {
             padding: 12px 20px;
             border: none;
@@ -72,29 +49,10 @@
             cursor: pointer;
             font-size: 16px;
         }
-
         button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-        #status {
-            text-align: center;
-            margin: 10px 0;
-            font-style: italic;
-            color: #888;
-            display: none;
-        }
-
-        .error-msg {
-            color: #ff5252;
-            text-align: center;
-            margin-bottom: 15px;
-        }
-
-        .track-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
+        #status { text-align: center; margin: 10px 0; font-style: italic; color: #888; display: none; }
+        .error-msg { color: #ff5252; text-align: center; margin-bottom: 15px; }
+        .track-list { display: flex; flex-direction: column; gap: 10px; }
         .track {
             background-color: var(--card-bg);
             padding: 12px 15px;
@@ -104,24 +62,10 @@
             align-items: center;
             border: 1px solid var(--border-color);
         }
-
-        .track-info {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            overflow: hidden;
-            padding-right: 10px;
-            flex: 1;
-        }
-
+        .track-info { display: flex; flex-direction: column; gap: 4px; overflow: hidden; padding-right: 10px; flex: 1; }
         .track-artist { font-size: 12px; color: #999; }
         .track-title { font-size: 15px; font-weight: 600; }
-
-        .actions {
-            display: flex;
-            gap: 8px;
-        }
-
+        .actions { display: flex; gap: 8px; }
         .btn-play {
             background-color: var(--accent-color);
             color: #000;
@@ -132,7 +76,6 @@
             font-weight: bold;
             font-size: 13px;
         }
-
         .btn-dl {
             background-color: var(--success-color);
             color: #000;
@@ -143,7 +86,6 @@
             font-size: 13px;
             display: inline-block;
         }
-
         .audio-player-container {
             position: fixed;
             bottom: 0;
@@ -159,13 +101,7 @@
             z-index: 1000;
             box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
         }
-
-        audio {
-            width: 100%;
-            max-width: 600px;
-            outline: none;
-        }
-
+        audio { width: 100%; max-width: 600px; outline: none; }
         @media (max-width: 480px) {
             .search-box { flex-direction: column; }
             button#searchBtn { width: 100%; }
@@ -178,16 +114,13 @@
 <body>
 
 <div class="container">
-    <h1>🎵 Плеер и поиск (Zaycev.net)</h1>
-    
+    <h1>🎵 Плеер и поиск</h1>
     <div class="search-box">
         <input type="text" id="searchInput" placeholder="Поиск (например: Кино Группа крови)" onkeypress="handleKeyPress(event)">
         <button id="searchBtn" onclick="searchMusic()">Найти</button>
     </div>
-
     <div id="status">Идет поиск...</div>
     <div id="errorMsg" class="error-msg"></div>
-    
     <div id="results" class="track-list"></div>
 </div>
 
@@ -196,10 +129,17 @@
 </div>
 
 <script>
-    // Используем публичный CORS-прокси для обхода ограничений браузера
-    const CORS_PROXY = "https://api.allorigins.win/get?url=";
-    const ZAYCEV_BASE_URL = "https://zaycev.net";
-    const ZAYCEV_SEARCH_URL = ZAYCEV_BASE_URL + "/search.html?query_search=";
+    // Список резервных CORS-прокси для обхода блокировок браузера
+    const CORS_PROXIES = [
+        "https://api.allorigins.win/get?url=",
+        "https://corsproxy.io/?",
+        "https://api.cors.lol/?url=",
+        "https://cors.sh/",
+        "https://thingproxy.freeboard.io/fetch/"
+    ];
+    
+    const HITMOS_BASE_URL = "https://hitmos.me";
+    const HITMOS_SEARCH_URL = HITMOS_BASE_URL + "/search?q=";
     
     const audioPlayer = document.getElementById('mainAudio');
 
@@ -207,10 +147,30 @@
         if (e.key === 'Enter') searchMusic();
     }
 
+    // Универсальная функция запроса с перебором прокси
+    async function fetchWithProxy(targetUrl) {
+        let lastError = null;
+        for (const proxy of CORS_PROXIES) {
+            try {
+                const response = await fetch(proxy + encodeURIComponent(targetUrl));
+                if (response.ok) {
+                    const text = await response.text();
+                    // Проверяем, что прокси вернул HTML, а не ошибку
+                    if (text && text.length > 100) {
+                        return text;
+                    }
+                }
+            } catch (e) {
+                console.warn(`Прокси ${proxy} не сработал:`, e);
+                lastError = e;
+            }
+        }
+        throw new Error("Все CORS-прокси недоступны. Попробуйте позже.");
+    }
+
     function renderTracks(tracks, headerText = "") {
         const resultsDiv = document.getElementById('results');
         resultsDiv.innerHTML = ''; 
-        
         if (headerText) {
             const header = document.createElement('h3');
             header.innerText = headerText;
@@ -219,19 +179,15 @@
             header.style.color = "#888";
             resultsDiv.appendChild(header);
         }
-
         if (tracks.length === 0) {
             resultsDiv.innerHTML += '<p style="text-align:center; color:#888;">Ничего не найдено.</p>';
             return;
         }
-
         tracks.forEach(track => {
             const trackDiv = document.createElement('div');
             trackDiv.className = 'track';
-            
             const safeArtist = track.artist.replace(/'/g, "\\'");
             const safeTitle = track.title.replace(/'/g, "\\'");
-
             trackDiv.innerHTML = `
                 <div class="track-info">
                     <span class="track-artist">${track.artist}</span>
@@ -249,43 +205,30 @@
     async function searchMusic() {
         const query = document.getElementById('searchInput').value.trim();
         if (!query) return;
-
         const statusDiv = document.getElementById('status');
         const errorMsg = document.getElementById('errorMsg');
         const searchBtn = document.getElementById('searchBtn');
-
         statusDiv.style.display = 'block';
         errorMsg.innerText = '';
         searchBtn.disabled = true;
-
         try {
-            const targetUrl = ZAYCEV_SEARCH_URL + encodeURIComponent(query);
-            const response = await fetch(CORS_PROXY + encodeURIComponent(targetUrl));
-            const data = await response.json();
-            
+            const targetUrl = HITMOS_SEARCH_URL + encodeURIComponent(query);
+            const htmlText = await fetchWithProxy(targetUrl);
             const parser = new DOMParser();
-            const doc = parser.parseFromString(data.contents, "text/html");
-
-            // ВНИМАНИЕ: Селекторы могут измениться, если Zaycev.net обновит дизайн.
-            // Ищем элементы, содержащие информацию о треках.
-            const trackNodes = doc.querySelectorAll('.track, .song-item, .b-track'); 
-
+            const doc = parser.parseFromString(htmlText, "text/html");
+            const trackNodes = doc.querySelectorAll('.track'); 
             if (trackNodes.length === 0) {
                 errorMsg.innerText = "Ничего не найдено. Попробуйте другой запрос.";
                 statusDiv.style.display = 'none';
                 searchBtn.disabled = false;
                 return;
             }
-
             let parsedTracks = [];
             let count = 0;
-
             trackNodes.forEach(node => {
                 if (count >= 15) return;
-
-                const titleEl = node.querySelector('.track-title, .song-title, a');
-                const artistEl = node.querySelector('.track-artist, .song-artist');
-
+                const titleEl = node.querySelector('.track-title') || node.querySelector('a');
+                const artistEl = node.querySelector('.track-artist');
                 if (titleEl) {
                     parsedTracks.push({
                         title: titleEl.innerText.trim(),
@@ -294,16 +237,14 @@
                     count++;
                 }
             });
-
             if (parsedTracks.length > 0) {
                 renderTracks(parsedTracks, `Результаты поиска: "${query}"`);
             } else {
                 errorMsg.innerText = "Не удалось распознать треки.";
             }
-
         } catch (error) {
             console.error(error);
-            errorMsg.innerText = "Ошибка при поиске. CORS-прокси может быть перегружен.";
+            errorMsg.innerText = error.message;
         } finally {
             statusDiv.style.display = 'none';
             searchBtn.disabled = false;
@@ -312,24 +253,19 @@
 
     async function getMp3Url(artist, title) {
         const query = `${artist} ${title}`;
-        const targetUrl = ZAYCEV_SEARCH_URL + encodeURIComponent(query);
-        
-        const response = await fetch(CORS_PROXY + encodeURIComponent(targetUrl));
-        const data = await response.json();
-        
+        const targetUrl = HITMOS_SEARCH_URL + encodeURIComponent(query);
+        const htmlText = await fetchWithProxy(targetUrl);
         const parser = new DOMParser();
-        const doc = parser.parseFromString(data.contents, "text/html");
-
-        const dlLinkEl = doc.querySelector('a[href*="download"], a[download], a[href*=".mp3"]');
-        
+        const doc = parser.parseFromString(htmlText, "text/html");
+        const dlLinkEl = doc.querySelector('a[href*="download"]') || doc.querySelector('a[download]') || doc.querySelector('a[href*=".mp3"]');
         if (dlLinkEl) {
             let url = dlLinkEl.getAttribute('href');
             if (url && !url.startsWith('http')) {
-                url = ZAYCEV_BASE_URL + url;
+                url = HITMOS_BASE_URL + url;
             }
             return url;
         }
-        throw new Error("Ссылка не найдена");
+        throw new Error("Ссылка на MP3 не найдена");
     }
 
     async function fetchAndPlay(artist, title) {
@@ -337,11 +273,10 @@
         const oldText = btn.innerText;
         btn.innerText = "Загрузка...";
         btn.disabled = true;
-
         try {
             const mp3Url = await getMp3Url(artist, title);
             audioPlayer.src = mp3Url;
-            audioPlayer.play();
+            await audioPlayer.play();
         } catch (error) {
             alert("Не удалось запустить аудио. Возможно, сайт блокирует потоковое воспроизведение. Попробуйте скачать файл.");
         } finally {
@@ -355,7 +290,6 @@
         const oldText = btn.innerText;
         btn.innerText = "Ждите...";
         btn.disabled = true;
-
         try {
             const mp3Url = await getMp3Url(artist, title);
             const a = document.createElement('a');
